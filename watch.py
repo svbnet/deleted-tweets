@@ -11,6 +11,7 @@ import os
 import re
 from twython import Twython, TwythonStreamer
 from twython.exceptions import TwythonAuthError
+from requests.exceptions import ChunkedEncodingError
 
 def get_setting(name):
     global cur
@@ -34,7 +35,7 @@ def render_tweet(tweet):
 class MyStreamer(TwythonStreamer):
     def on_success(self, data):
         global cur, rest, follow_ids, template_path
-        if 'text' in data and 'retweeted_status' not in data:
+        if 'text' in data:
             if data['user']['id_str'] in follow_ids:
                 data_json = json.dumps(data)
                 cur.execute(
@@ -51,7 +52,7 @@ class MyStreamer(TwythonStreamer):
                 tweet = json.loads(row[0])
                 if 'retweeted_status' not in tweet:
                     elapsed = human_time_difference(dt_from_timestampms(tweet['timestamp_ms']), dt_from_timestampms(data['delete']['timestamp_ms']))
-                    status = 'deleted ' + elapsed
+                    status = 'deleted after ' + elapsed
                     if len(tweet['entities']['urls']) > 0:
                         status += "\nlinks in original tweet:"
                         for url in tweet['entities']['urls']:
@@ -73,7 +74,11 @@ def begin_streaming():
     global follow_ids
     streaming = MyStreamer(consumer_key, consumer_secret,
                             access_token, access_token_secret)
-    streaming.statuses.filter(follow=','.join(follow_ids))
+    try:
+        streaming.statuses.filter(follow=','.join(follow_ids))
+    except ChunkedEncodingError as err:
+        print('Recoverable stream error: ', err)
+        begin_streaming()
 
 db_path_default = os.path.join(os.path.dirname(
     os.path.abspath(__file__)), 'tweets.db')
