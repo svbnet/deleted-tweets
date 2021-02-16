@@ -1,6 +1,8 @@
 #!/usr/bin/python
 from tweetcap import tweetcap
 from util import human_time_difference, dt_from_timestampms
+import context
+from watcher import Watcher
 
 from datetime import datetime
 import dateutil.tz
@@ -84,6 +86,7 @@ db_path_default = os.path.join(os.path.dirname(
     os.path.abspath(__file__)), 'tweets.db')
 db_path = os.getenv('DB', db_path_default)
 con = sqlite3.connect(db_path, isolation_level=None)
+context.con = con
 with con:
     cur = con.cursor()
     if len(sys.argv) == 2 and sys.argv[1] == 'init':
@@ -186,10 +189,7 @@ with con:
 
         follow_ids = get_setting('follow').split(',')
         print("Following user IDs: " + ', '.join(follow_ids))
-        template_path_default = os.path.join(os.path.dirname(
-            os.path.abspath(__file__)), 'template_new.html')
-        template_path = os.getenv('TEMPLATE', template_path_default)
+
         rest = Twython(consumer_key, consumer_secret,
                        access_token, access_token_secret)
-        
-        begin_streaming()
+        Watcher(consumer_key, consumer_secret, access_token, access_token_secret, rest, follow_ids).begin()

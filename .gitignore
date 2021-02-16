@@ -2,3 +2,5 @@ venv/
 __pycache__/
 .vscode/
 tweets.db
+media/
+*.db-journal
