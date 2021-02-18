@@ -4,10 +4,13 @@
 		<meta charset="UTF-8" />
 		<title>template</title>
 		<style type="text/css">
-			@font-face {
-				font-family: "icons";
-				src: url("https://abs.twimg.com/a/1429231001/font/rosetta-icons-Regular.woff") format('woff');
+			img.emoji {
+				height: 1em;
+				width: 1em;
+				margin: 0 .05em 0 .1em;
+				vertical-align: -0.1em;
 			}
+			
 			body {
 				font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
 				background-color: #dddddd;
@@ -126,7 +129,7 @@
 				margin: 15px 0;
 			}
 		</style>
-		<script src="https://twemoji.maxcdn.com/twemoji.min.js"></script>
+		<script crossorigin="anonymous" src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js"></script>
 	</head>
 	<body>
 		<div id="container">
@@ -159,8 +162,11 @@
 			</div>
 		</div>
 		<script type="text/javascript">
-			var e = document.getElementById('tweet');
-			e.innerHTML = twemoji.parse(e.innerHTML);
+			var dnElem = document.getElementById('name');
+			twemoji.parse(dnElem);
+
+			var tweetElem = document.getElementById('tweet');
+			twemoji.parse(tweetElem);
 		</script>
 	</body>
 </html>

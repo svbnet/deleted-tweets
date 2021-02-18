@@ -129,7 +129,8 @@ class Watcher(TwythonStreamer):
                 dt_from_timestampms(data['delete']['timestamp_ms'])
             )
     
-    def on_error(self, status_code, data):
+    def on_error(self, status_code, data, headers):
+        print('Stream error:', status_code, data, headers)
         if status_code == 420:
             print('hit ratelimit, disconnecting')
             self.disconnect()
