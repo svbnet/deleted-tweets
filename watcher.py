@@ -1,4 +1,4 @@
-import json, os, os.path, urllib.request
+import json, os, os.path, urllib.request, logging
 from datetime import datetime
 
 from twython import Twython, TwythonStreamer
@@ -9,6 +9,7 @@ import context
 from util import human_time_difference, dt_from_timestampms
 from tweetcap import tweetcap
 
+logger = logging.getLogger(__name__)
 
 def tweet_has_media(tweet_dict):
     return 'extended_entities' in tweet_dict and 'media' in tweet_dict['extended_entities']
@@ -36,10 +37,10 @@ class Watcher(TwythonStreamer):
             try:
                 self.statuses.filter(follow=','.join(self.follow_ids))
             except ChunkedEncodingError as err:
-                print('Recoverable stream error: ', err)
+                logger.info('Recoverable stream error: ', err)
 
     def save_tweet(self, tweet_dict):
-        print(f"[tweet:{tweet_dict['id_str']}] Inserting into DB...")
+        logger.info(f"[tweet:{tweet_dict['id_str']}] Inserting into DB...")
         data_json = json.dumps(tweet_dict)
         context.con.execute('INSERT OR IGNORE INTO tweets(id_str, json) VALUES (?,?)', (tweet_dict['id_str'], data_json))
 
@@ -64,21 +65,21 @@ class Watcher(TwythonStreamer):
                     urllib.request.urlretrieve(url, media_path)
                     i += 1
             except Exception as err:
-                print(f"[tweet:{tweet_dict['id_str']}] Downloading media failed, tweet may have been deleted too early ", err)
+                logger.exception(f"[tweet:{tweet_dict['id_str']}] Downloading media failed, tweet may have been deleted too early ", err)
         
-        print(f"[tweet:{tweet_dict['id_str']}] finished")
+        logger.debug(f"[tweet:{tweet_dict['id_str']}] finished")
     
     def post_saved_tweet(self, tweet_id, deleted_at):
-        print(f"[tweet:{tweet_id}] begin reposting")
+        logger.info(f"[tweet:{tweet_id}] begin reposting")
         cur = context.con.execute('SELECT json FROM tweets WHERE id_str = ?', (tweet_id,))
         row = cur.fetchone()
         if row is None:
-            print(f"[tweet:{tweet_id}] not found")
+            logger.info(f"[tweet:{tweet_id}] not found")
             return
 
         tweet = json.loads(row[0])
         if 'retweeted_status' in tweet:
-            print(f"[tweet:{tweet_id}] is a retweet, so skipping")
+            logger.info(f"[tweet:{tweet_id}] is a retweet, so skipping")
             return
         
         elapsed = human_time_difference(dt_from_timestampms(tweet['timestamp_ms']), deleted_at)
@@ -94,12 +95,12 @@ class Watcher(TwythonStreamer):
         new_tweet = self.poster.update_status(status=status, media_ids=[media_id])
         image.close()
         os.remove(image_path)
-        print(f"[tweet:{tweet_id}] reposted, id = {new_tweet['id_str']}")
+        logger.info(f"[tweet:{tweet_id}] reposted, id = {new_tweet['id_str']}")
 
         # Post media if we have it as a reply
         dir_pref = os.path.join(context.media_dir, tweet_id)
         if os.path.exists(dir_pref):
-            print(f"[tweet:{tweet_id}] posting followup media")
+            logger.info(f"[tweet:{tweet_id}] posting followup media")
             new_media_ids = []
             for m in os.listdir(dir_pref):
                 full_path = os.path.join(dir_pref, m)
@@ -130,7 +131,7 @@ class Watcher(TwythonStreamer):
             )
     
     def on_error(self, status_code, data, headers):
-        print('Stream error:', status_code, data, headers)
+        logger.error('Stream error:', status_code, data, headers)
         if status_code == 420:
-            print('hit ratelimit, disconnecting')
+            logger.info('hit ratelimit, disconnecting')
             self.disconnect()

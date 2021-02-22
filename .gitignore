@@ -4,3 +4,4 @@ __pycache__/
 tweets.db
 media/
 *.db-journal
+log
