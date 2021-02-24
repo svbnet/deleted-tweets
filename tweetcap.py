@@ -6,7 +6,7 @@ from PIL import Image, ImageChops, ImageDraw
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 import context
-from util import short_human_time
+from util import short_human_time, normalize_time_format_str
 
 def tweet_strptime(date):
 	return datetime.strptime(date, '%a %b %d %H:%M:%S %z %Y')
@@ -21,7 +21,7 @@ def short_datetime(value):
 
 
 def long_datetime(value):
-	return tweet_strptime(value).strftime('%I:%M %p · %b %d, %Y')
+	return tweet_strptime(value).strftime(normalize_time_format_str('%-I:%M %p · %b %d, %Y'))
 
 
 def tweet_source_name(value):

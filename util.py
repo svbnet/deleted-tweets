@@ -1,4 +1,5 @@
 from datetime import datetime
+import os
 
 from dateutil import tz
 
@@ -50,6 +51,7 @@ def human_time_difference(origin_time, current_time=None):
         return str(int(day_diff / 30)) + " months"
     return str(int(day_diff / 365)) + " years"
 
+
 def short_human_time(origin_time, current_time=None):
     if current_time is None:
         now = datetime.now().astimezone(tz.UTC)
@@ -74,3 +76,8 @@ def short_human_time(origin_time, current_time=None):
     if day_diff < 365:
         return origin_time.strftime('%b %d')
     return origin_time.strftime('%b %d, %Y')
+
+def normalize_time_format_str(format_str):
+    if os.name == 'nt':
+        return format_str.replace('%-', '%#')
+    return format_str
