@@ -9,7 +9,8 @@ def relativize(filename):
 
 con = None
 media_dir = os.getenv('MEDIA_DIR', relativize('media'))
-template_path = os.getenv('TEMPLATE', relativize('template_new.html'))
+template_path = os.getenv('TEMPLATE', relativize('templates'))
+template_name = os.getenv('TEMPLATE_NAME', 'template_new.html')
 db_path = os.getenv('DB', relativize('tweets.db'))
 log_path = os.getenv('LOG', relativize('log'))
 log_level = os.getenv('LOGLEVEL', 'INFO')

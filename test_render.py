@@ -1,16 +1,11 @@
-import argparse
-from datetime import datetime
+import sys, json
 
 from tweetcap import tweetcap
 import context
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--dispname', default='John 🤩 Sample')
-parser.add_argument('--username', default='johnsample')
-parser.add_argument('--text', default='The quick brown fox jumps over the lazy dog 1234567890 🤓🦴👩🏾‍🤝‍👩🏻👩‍👧👨‍👩‍👦‍👦👨‍👨‍👦🌷🌲🌕⛱')
-parser.add_argument('--profpic', default='https://placehold.it/64x64')
-parser.add_argument('--date', default=datetime.now())
+context.open_db()
 
-args = parser.parse_args()
+tweet_id = sys.argv[1]
+tweet = json.loads(context.con.execute('select json from tweets where id_str = ?', (tweet_id,)).fetchone()[0])
 
-print(tweetcap(context.template_path, args.dispname, args.username, args.profpic, args.text, args.date))
+print(tweetcap(context.template_name, tweet))

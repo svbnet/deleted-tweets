@@ -1,5 +1,43 @@
-import tempfile, subprocess, re, cgi, os, dateutil.parser, dateutil.tz, pystache
+import tempfile, subprocess, os, re
+from datetime import datetime
+
+from twython import Twython
 from PIL import Image, ImageChops, ImageDraw
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+import context
+from util import short_human_time
+
+def tweet_strptime(date):
+	return datetime.strptime(date, '%a %b %d %H:%M:%S %z %Y')
+
+
+def tweet_htmlize(value):
+	return Twython.html_for_tweet(value)
+
+
+def short_datetime(value):
+	return short_human_time(tweet_strptime(value))
+
+
+def long_datetime(value):
+	return tweet_strptime(value).strftime('%I:%M %p · %b %d, %Y')
+
+
+def tweet_source_name(value):
+	return re.search(r'<a(?:.*)>(.*)<\/a>', value).group(1)
+
+
+environment = Environment(
+	loader=FileSystemLoader(context.template_path),
+	autoescape=select_autoescape(['html', 'xml'])
+)
+
+environment.filters['tweet_htmlize'] = tweet_htmlize
+environment.filters['short_datetime'] = short_datetime
+environment.filters['long_datetime'] = long_datetime
+environment.filters['tweet_source_name'] = tweet_source_name
+
 
 def trim(path, margin):
 	image = Image.open(path).convert('RGB')
@@ -19,15 +57,10 @@ def trim(path, margin):
 	del draw
 	image.save(path)
 
-def tweetcap(template_path, tweet_name, tweet_handle, tweet_avatar, tweet_html, tweet_date):
-	tweet_date = tweet_date.astimezone(dateutil.tz.tzutc()).strftime('%I:%M %p - %d %b %Y')
 
-	values = {'name': tweet_name, 'handle': tweet_handle, 'avatar': tweet_avatar, 'tweet_html': tweet_html, 'date': tweet_date}
-
-	with open(template_path, 'r') as template:
-		html = template.read()
-
-	html = pystache.render(html, values)
+def tweetcap(template_name, tweet):
+	template = environment.get_template(template_name)
+	html = template.render(tweet=tweet)
 
 	temp = tempfile.NamedTemporaryFile(mode='wb', suffix='.html', delete=False)
 	temp.write(html.encode('ascii', 'xmlcharrefreplace'))

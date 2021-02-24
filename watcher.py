@@ -38,6 +38,26 @@ class Watcher(TwythonStreamer):
                 self.statuses.filter(follow=','.join(self.follow_ids))
             except ChunkedEncodingError as err:
                 logger.info('Recoverable stream error: ', err)
+    
+    def save_tweet_media(self, tweet_dict):
+        logger.info(f"[tweet:{tweet_dict['id_str']}] Downloading media...")
+        dir_pref = os.path.join(context.media_dir, tweet_dict['id_str'])
+        media = tweet_dict['extended_entities']['media']
+        i = 1
+        for item in media:
+            mtype = item['type']
+            if mtype == 'video':
+                variants = sorted(item['video_info']['variants'], key=lambda variant: variant.get('bitrate', 0), reverse=True)
+                url = variants[0]['url']
+                ext = '.mp4'
+            else:
+                url = item['media_url_https']
+                ext = os.path.splitext(url)[1]
+            media_path = os.path.join(dir_pref, f"{i}_{mtype}{ext}")
+            logger.debug(f"[tweet:{tweet_dict['id_str']}][{mtype}:{i}] Downloading {url}...")
+            os.makedirs(dir_pref, exist_ok=True)
+            urllib.request.urlretrieve(url, media_path)
+            i += 1
 
     def save_tweet(self, tweet_dict):
         logger.info(f"[tweet:{tweet_dict['id_str']}] Inserting into DB...")
@@ -46,28 +66,42 @@ class Watcher(TwythonStreamer):
 
         if tweet_has_media(tweet_dict):
             try:
-                print(f"[tweet:{tweet_dict['id_str']}] Downloading media...")
-                dir_pref = os.path.join(context.media_dir, tweet_dict['id_str'])
-                media = tweet_dict['extended_entities']['media']
-                i = 1
-                for item in media:
-                    mtype = item['type']
-                    if mtype == 'video':
-                        variants = sorted(item['video_info']['variants'], key=lambda variant: variant.get('bitrate', 0), reverse=True)
-                        url = variants[0]['url']
-                        ext = '.mp4'
-                    else:
-                        url = item['media_url_https']
-                        ext = os.path.splitext(url)[1]
-                    media_path = os.path.join(dir_pref, f"{i}_{mtype}{ext}")
-                    print(f"[tweet:{tweet_dict['id_str']}][{mtype}:{i}] Downloading {url}...")
-                    os.makedirs(dir_pref, exist_ok=True)
-                    urllib.request.urlretrieve(url, media_path)
-                    i += 1
+                self.save_tweet_media(tweet_dict)
             except Exception as err:
                 logger.exception(f"[tweet:{tweet_dict['id_str']}] Downloading media failed, tweet may have been deleted too early ", err)
         
+        if tweet_dict['is_quote_status']:
+            quoted_tweet = tweet_dict['quoted_status']
+            if tweet_has_media(quoted_tweet):
+                logger.info('Quoted tweet has media, so downloading')
+                try:
+                    self.save_tweet_media(quoted_tweet)
+                except Exception as err:
+                    logger.exception(f"[tweet:{quoted_tweet['id_str']}] Downloading media failed, tweet may have been deleted too early ", err)
+        
         logger.debug(f"[tweet:{tweet_dict['id_str']}] finished")
+    
+    def post_tweet_media_as_followup(self, tweet_id, in_reply_id, status):
+        dir_pref = os.path.join(context.media_dir, tweet_id)
+        if os.path.exists(dir_pref):
+            logger.info(f"[tweet:{tweet_id}] posting followup media")
+            new_media_ids = []
+            for m in os.listdir(dir_pref):
+                full_path = os.path.join(dir_pref, m)
+                with open(full_path, 'rb') as fp:
+                    if full_path.endswith('mp4'):
+                        pass # Not working
+                        # new_media_id = self.poster.upload_media(media=fp, media_type='video/mp4')['media_id']
+                    else:
+                        new_media_id = self.poster.upload_media(media=fp)['media_id']
+                        new_media_ids.append(new_media_id)
+            if new_media_ids:
+                self.poster.update_status(
+                    status=status, 
+                    media_ids=new_media_ids,
+                    in_reply_to_status_id=in_reply_id,
+                    auto_populate_reply_metadata=True
+                )
     
     def post_saved_tweet(self, tweet_id, deleted_at):
         logger.info(f"[tweet:{tweet_id}] begin reposting")
@@ -98,27 +132,10 @@ class Watcher(TwythonStreamer):
         logger.info(f"[tweet:{tweet_id}] reposted, id = {new_tweet['id_str']}")
 
         # Post media if we have it as a reply
-        dir_pref = os.path.join(context.media_dir, tweet_id)
-        if os.path.exists(dir_pref):
-            logger.info(f"[tweet:{tweet_id}] posting followup media")
-            new_media_ids = []
-            for m in os.listdir(dir_pref):
-                full_path = os.path.join(dir_pref, m)
-                with open(full_path, 'rb') as fp:
-                    if full_path.endswith('mp4'):
-                        pass # Not working
-                        # new_media_id = self.poster.upload_media(media=fp, media_type='video/mp4')['media_id']
-                    else:
-                        new_media_id = self.poster.upload_media(media=fp)['media_id']
-                        new_media_ids.append(new_media_id)
-            if new_media_ids:
-                status = 'media included in this tweet:'
-                self.poster.update_status(
-                    status=status, 
-                    media_ids=new_media_ids,
-                    in_reply_to_status_id=new_tweet['id_str'],
-                    auto_populate_reply_metadata=True
-                )
+        self.post_tweet_media_as_followup(tweet_id, new_tweet['id_str'], 'media included in this tweet:')
+        # Try and post quoted media
+        if tweet['is_quote_status']:
+            self.post_tweet_media_as_followup(tweet['quoted_status']['id_str'], new_tweet['id_str'], 'media from quoted tweet:')
     
     def on_success(self, data):
         if 'text' in data:

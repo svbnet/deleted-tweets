@@ -44,7 +44,7 @@
 				padding: 0 15px;
 			}
 
-			#header {
+			.header {
 				height: 48px;
 				display: flex;
 				display: -webkit-box;
@@ -53,18 +53,18 @@
 				padding-top: 10px;
 			}
 
-			#tools {
+			.tools {
 				flex-grow: 1;
 				-webkit-box-flex: 1;
 				text-align: right;
 			}
 
-			#tools svg {
+			.tools svg {
 				width: 18.75px;
 				height: 18.75px;
 			}
 
-			#avatar {
+			.avatar {
 				border-radius: 48px;
 				height: 48px;
 				width: 48px;
@@ -72,18 +72,18 @@
 				margin-right: 10px;
 			}
 
-			#name {
+			.name {
 				font-weight: 700;
 				display: block;
 			}
 
-			#handle {
+			.handle {
 				color: rgb(91, 112, 131);
 				font-weight: 400;
 				display: block;
 			}
 
-			#tweet {
+			.tweet {
 				margin-top: 10px;
 				font-size: 23px;
 				font-weight: 400;
@@ -101,7 +101,7 @@
 				padding: 0 1.4px 0 2.8px;
 				vertical-align: -2.8px;
 			}
-			#buttons {
+			.buttons {
 				display: flex;
 				display: -webkit-box;
 				-webkit-box-align: center;
@@ -124,29 +124,68 @@
 			.button svg {
 				fill: rgb(91, 112, 131);
 			}
-			#date {
+			.date {
 				color: rgb(91, 112, 131);
 				margin: 15px 0;
+			}
+
+			.qt {
+				margin-top: 10px;
+				border-radius: 16px;
+				border: 1px solid rgb(196, 207, 214);
+			}
+
+			.qt-header {
+				margin: 10px 10px 0 10px;
+				display: -webkit-box;
+			}
+
+			.qt-header .name {
+				margin-right: 5px;
+			}
+
+			.qt-avatar {
+				width: 20px;
+				height: 20px;
+				border-radius: 9999px;
+				display: block;
+				margin-right: 5px;
+				
+			}
+
+			.qt-body {
+				margin: 5px 10px 10px 10px;
 			}
 		</style>
 		<script crossorigin="anonymous" src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js"></script>
 	</head>
 	<body>
 		<div id="container">
-			<div id="header" class="inner-padded">
-				<img src="{{avatar}}" id="avatar" alt="avatar">
-				<div id="names">
-					<span id="name">{{name}}</span>
-					<span id="handle">@{{handle}}</span>
+			<div class="header inner-padded">
+				<img src="{{tweet.user.profile_image_url_https}}" class="avatar" alt="avatar">
+				<div class="names">
+					<span class="name emojify">{{tweet.user.name}}</span>
+					<span class="handle">@{{tweet.user.screen_name}}</span>
 				</div>
-				<div id="tools">
+				<div class="tools">
 					<svg viewBox="0 0 24 24"><g><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></g></svg>
 				</div>
 			</div>
-			<p id="tweet" class="inner-padded">{{{tweet_html}}}</p>
-
-			<div id="date" class="inner-padded">{{date}}</div>
-			<div id="buttons" class="inner-padded">
+			<p class="tweet emojify" class="inner-padded">{{tweet|tweet_htmlize|safe}}</p>
+			{% if tweet.is_quote_status %}
+			<div class="qt inner-padded">
+				<div class="qt-header">
+					<img src="{{tweet.quoted_status.user.profile_image_url_https}}" class="qt-avatar">
+					<p class="name emojify">{{tweet.quoted_status.user.name}}</p>
+					<p class="handle">@{{tweet.quoted_status.user.screen_name}} &middot; {{tweet.quoted_status.created_at|short_datetime}}</p>
+				</div>
+				<p class="qt-body emojify">
+					{{tweet.quoted_status|tweet_htmlize|safe}}
+				</p>
+			</div>
+			{% endif %}
+			<div class="date" class="inner-padded">{{tweet.created_at|long_datetime}} &middot; {{tweet.source|tweet_source_name}}</div>
+			<div class="buttons" class="inner-padded">
 				<span class="button">
 					<svg viewBox="0 0 24 24"><g><path d="M14.046 2.242l-4.148-.01h-.002c-4.374 0-7.8 3.427-7.8 7.802 0 4.098 3.186 7.206 7.465 7.37v3.828c0 .108.044.286.12.403.142.225.384.347.632.347.138 0 .277-.038.402-.118.264-.168 6.473-4.14 8.088-5.506 1.902-1.61 3.04-3.97 3.043-6.312v-.017c-.006-4.367-3.43-7.787-7.8-7.788zm3.787 12.972c-1.134.96-4.862 3.405-6.772 4.643V16.67c0-.414-.335-.75-.75-.75h-.396c-3.66 0-6.318-2.476-6.318-5.886 0-3.534 2.768-6.302 6.3-6.302l4.147.01h.002c3.532 0 6.3 2.766 6.302 6.296-.003 1.91-.942 3.844-2.514 5.176z"></path></g></svg>
 				</span>
@@ -162,11 +201,7 @@
 			</div>
 		</div>
 		<script type="text/javascript">
-			var dnElem = document.getElementById('name');
-			twemoji.parse(dnElem);
-
-			var tweetElem = document.getElementById('tweet');
-			twemoji.parse(tweetElem);
+			twemoji.parse(document.body);
 		</script>
 	</body>
 </html>
