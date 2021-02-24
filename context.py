@@ -8,11 +8,23 @@ def relativize(filename):
 
 
 con = None
+
+# Directory for storing and retrieving downloaded media
 media_dir = os.getenv('MEDIA_DIR', relativize('media'))
+
+# Jinja2 base directory for templates
 template_path = os.getenv('TEMPLATE', relativize('templates'))
+
+# Template to use for Tweets
 template_name = os.getenv('TEMPLATE_NAME', 'template_new.html')
+
+# Path to database
 db_path = os.getenv('DB', relativize('tweets.db'))
+
+# Path to log file
 log_path = os.getenv('LOG', relativize('log'))
+
+# Log level to set (see logging module docs)
 log_level = os.getenv('LOGLEVEL', 'INFO')
 
 
