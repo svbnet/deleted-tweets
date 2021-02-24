@@ -4,7 +4,7 @@ this is a twitter bot that monitors specific twitter account(s) and tweets scree
 
 ### dependencies
 
-- wkhtmltopdf - in most cases it's best to just download it from [https://wkhtmltopdf.org/downloads.html](here) then install it rather than directly through your package manager.
+- wkhtmltopdf - in most cases it's best to just download it from [here](https://wkhtmltopdf.org/downloads.html) then install it rather than directly through your package manager.
 - Python 3 (>= 3.7) and `pip`
 - `virtualenv`
 
