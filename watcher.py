@@ -16,13 +16,7 @@ def tweet_has_media(tweet_dict):
 
 
 def render_tweet(tweet):
-    return tweetcap(
-            context.template_path,
-            tweet['user']['name'],
-            tweet['user']['screen_name'],
-            tweet['user']['profile_image_url'],
-            Twython.html_for_tweet(tweet),
-            datetime.fromtimestamp(int(int(tweet['timestamp_ms']) / 1000)).replace(tzinfo=dateutil.tz.tzutc()))
+    return tweetcap(context.template_name, tweet)
 
 
 class Watcher(TwythonStreamer):
