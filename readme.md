@@ -29,6 +29,16 @@ this is a twitter bot that monitors specific twitter account(s) and tweets scree
 - run `./watch.py`
 - you'll probably want to use something like `runit` for process supervision
 
-## configuration
+### configuration
 
 - environment variables you can set are in `context.py`.
+
+### custom fonts
+
+if you are running it on Linux the rendered output will probably look pretty bad. you can improve this with custom fonts, which the default template will automatically use. at the moment helvetica is included which looks fine (though not on Windows, which is fine since it'll just fallback to arial).
+
+- download https://about.twitter.com/content/dam/about-twitter/en/brand-toolkit/downloads/twitter-tweet-template-helvetica-01272021.zip and copy everything from the `Fonts` directory to `assets/fonts`
+- `export CUSTOM_FONT='helvetica'` before running
+
+## to-dos
+- rendering is slow because 

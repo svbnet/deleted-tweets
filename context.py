@@ -37,10 +37,10 @@ def setup_logger():
     fh.setFormatter(formatter)
     sh = logging.StreamHandler()
     sh.setFormatter(formatter)
-    logger = logging.getLogger('')
+    logger = logging.root
+    logger.setLevel(getattr(logging, log_level))
     logger.addHandler(fh)
     logger.addHandler(sh)
-    logger.setLevel(getattr(logging, log_level))
 
 
 def open_db():

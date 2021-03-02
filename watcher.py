@@ -31,7 +31,7 @@ class Watcher(TwythonStreamer):
             try:
                 self.statuses.filter(follow=','.join(self.follow_ids))
             except ChunkedEncodingError as err:
-                logger.info('Recoverable stream error: ', err)
+                logger.info('Recoverable stream error: %s', err, exc_info=True)
     
     def save_tweet_media(self, tweet_dict):
         logger.info(f"[tweet:{tweet_dict['id_str']}] Downloading media...")
@@ -142,7 +142,7 @@ class Watcher(TwythonStreamer):
             )
     
     def on_error(self, status_code, data, headers):
-        logger.error('Stream error:', status_code, data, headers)
+        logger.error('Stream error: %s %s %s', status_code, data, headers)
         if status_code == 420:
             logger.info('hit ratelimit, disconnecting')
             self.disconnect()
