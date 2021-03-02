@@ -81,7 +81,7 @@ def tweetcap(template_name, tweet):
 	image.close()
 
 	args = ['wkhtmltoimage']
-	if config['custom_font']:
+	if config.get('custom_font'):
 		args.append('--enable-local-file-access')
 	args += ['-f', 'png', temp.name, image.name]
 
