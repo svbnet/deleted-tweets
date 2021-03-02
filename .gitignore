@@ -5,3 +5,5 @@ tweets.db
 media/
 *.db-journal
 log
+assets/fonts/
+assets/twemoji/
