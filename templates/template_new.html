@@ -3,6 +3,9 @@
 	<head>
 		<meta charset="UTF-8" />
 		<title>template</title>
+		{% if config.custom_font %}
+		<link rel="stylesheet" href="{{config.custom_font.css_url}}">
+		{% endif %}
 		<style type="text/css">
 			img.emoji {
 				height: 1em;
@@ -12,7 +15,7 @@
 			}
 			
 			body {
-				font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+				font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 				background-color: #dddddd;
 				margin: 0;
 				padding: 0;

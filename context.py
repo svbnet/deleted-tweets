@@ -27,6 +27,9 @@ log_path = os.getenv('LOG', relativize('log'))
 # Log level to set (see logging module docs)
 log_level = os.getenv('LOGLEVEL', 'INFO')
 
+# Name of custom font stylesheet to use
+custom_font = os.getenv('CUSTOM_FONT', None)
+
 
 def setup_logger():
     formatter = logging.Formatter('%(asctime)s:%(name)s [%(levelname)s] %(message)s')

@@ -1,4 +1,4 @@
-import tempfile, subprocess, os, re
+import tempfile, subprocess, os, re, os.path, urllib.parse
 from datetime import datetime
 
 from twython import Twython
@@ -58,9 +58,20 @@ def trim(path, margin):
 	image.save(path)
 
 
+def make_config():
+	config = {}
+	if context.custom_font is not None:
+		path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'assets', 'css', f'{context.custom_font}.css'))
+		normal_path = path.replace('\\', '/')
+		url = f'file://{urllib.parse.quote(normal_path)}'
+		config['custom_font'] = {'css_url': url, 'path': path}
+	return config
+
 def tweetcap(template_name, tweet):
+	config = make_config()
 	template = environment.get_template(template_name)
-	html = template.render(tweet=tweet)
+
+	html = template.render(tweet=tweet, config=config)
 
 	temp = tempfile.NamedTemporaryFile(mode='wb', suffix='.html', delete=False)
 	temp.write(html.encode('ascii', 'xmlcharrefreplace'))
@@ -69,7 +80,12 @@ def tweetcap(template_name, tweet):
 	image = tempfile.NamedTemporaryFile(mode='wb', suffix='.png', delete=False)
 	image.close()
 
-	subprocess.check_call(['wkhtmltoimage', '-f', 'png', temp.name, image.name])
+	args = ['wkhtmltoimage']
+	if config['custom_font']:
+		args.append('--enable-local-file-access')
+	args += ['-f', 'png', temp.name, image.name]
+
+	subprocess.check_call(args)
 	os.remove(temp.name)
 	trim(image.name, 5)
 	return image.name
