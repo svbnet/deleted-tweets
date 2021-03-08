@@ -28,7 +28,7 @@ class Watcher(TwythonStreamer):
         self.follow_ids = follow_ids
     
     def begin(self):
-        while self.connection_error_count < 10:
+        while self.connection_attempts < 10:
             logger.info('Attempting connection (attempts: %s)', self.connection_attempts)
             try:
                 self.statuses.filter(follow=','.join(self.follow_ids))
