@@ -3,7 +3,7 @@ from datetime import datetime
 
 from twython import Twython, TwythonStreamer
 import dateutil.tz
-from requests.exceptions import ChunkedEncodingError
+from requests.exceptions import ChunkedEncodingError, ConnectionError
 
 import context
 from util import human_time_difference, dt_from_timestampms
@@ -23,15 +23,23 @@ class Watcher(TwythonStreamer):
 
     def __init__(self, consumer_key, consumer_secret, access_token, access_token_secret, poster, follow_ids):
         super().__init__(consumer_key, consumer_secret, access_token, access_token_secret)
+        self.connection_attempts = 0
         self.poster = poster
         self.follow_ids = follow_ids
     
     def begin(self):
-        while True:
+        while self.connection_error_count < 10:
+            logger.info('Attempting connection (attempts: %s)', self.connection_attempts)
             try:
                 self.statuses.filter(follow=','.join(self.follow_ids))
             except ChunkedEncodingError as err:
+                self.connection_attempts += 1
                 logger.info('Recoverable stream error: %s', err, exc_info=True)
+            except ConnectionError as err:
+                self.connection_attempts += 1
+                logger.info('Connection error, may be recoverable: %s', err, exc_info=True)
+
+        logger.warning('Failed to connect! Check network status/system time')
     
     def save_tweet_media(self, tweet_dict):
         logger.info(f"[tweet:{tweet_dict['id_str']}] Downloading media...")
@@ -132,6 +140,7 @@ class Watcher(TwythonStreamer):
             self.post_tweet_media_as_followup(tweet['quoted_status']['id_str'], new_tweet['id_str'], 'media from quoted tweet:')
     
     def on_success(self, data):
+        self.connection_attempts = 0
         if 'text' in data:
             if data['user']['id_str'] in self.follow_ids:
                 self.save_tweet(data)

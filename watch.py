@@ -26,4 +26,4 @@ except KeyboardInterrupt:
     logger.info('SIGINT/ctrl-c received')
     exit(0)
 except Exception as exc:
-    logger.exception('Critical error', exc)
+    logger.critical('Critical error: %s', exc, exc_info=True)
