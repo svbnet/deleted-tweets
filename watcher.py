@@ -1,12 +1,13 @@
 import json, os, os.path, urllib.request, logging
 from datetime import datetime
 
-from twython import Twython, TwythonStreamer
+from twython import Twython, TwythonStreamer, TwythonError
 import dateutil.tz
 from requests.exceptions import ChunkedEncodingError, ConnectionError
 
 import context
 from util import human_time_difference, dt_from_timestampms
+from retryer import Retryer
 from tweetcap import tweetcap
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ def tweet_has_media(tweet_dict):
 def render_tweet(tweet):
     return tweetcap(context.template_name, tweet)
 
+retry = Retryer(lambda a, m: logger.info('Attempting %s / %s', a, m), lambda e: logger.error('Error while attempting: %s', e))
 
 class Watcher(TwythonStreamer):
 
@@ -35,9 +37,9 @@ class Watcher(TwythonStreamer):
             except ChunkedEncodingError as err:
                 self.connection_attempts += 1
                 logger.info('Recoverable stream error: %s', err, exc_info=True)
-            except ConnectionError as err:
+            except TwythonError as err:
                 self.connection_attempts += 1
-                logger.info('Connection error, may be recoverable: %s', err, exc_info=True)
+                logger.info('Twython error, may be recoverable: %s', err, exc_info=True)
 
         logger.warning('Failed to connect! Check network status/system time')
     
@@ -119,17 +121,23 @@ class Watcher(TwythonStreamer):
             return
         
         elapsed = human_time_difference(dt_from_timestampms(tweet['timestamp_ms']), deleted_at)
-        status = 'deleted after ' + elapsed
+        status = 'deleted ' + elapsed
         if len(tweet['entities']['urls']) > 0:
             status += "\nlinks in original tweet:"
             for url in tweet['entities']['urls']:
                 status += ' ' + url['expanded_url']
 
         image_path = render_tweet(tweet)
-        image = open(image_path, 'rb')
-        media_id = self.poster.upload_media(media=image)['media_id']
-        new_tweet = self.poster.update_status(status=status, media_ids=[media_id])
-        image.close()
+        with open(image_path, 'rb') as image:
+            media = retry.attempt(lambda: self.poster.upload_media(media=image))
+            if not media:
+                logger.error('Failed to upload media!')
+                return
+            new_tweet = retry.attempt(lambda: self.poster.update_status(status=status, media_ids=[media['media_id']]))
+            if not new_tweet:
+                logger.error('Failed to send tweet!')
+                return
+
         os.remove(image_path)
         logger.info(f"[tweet:{tweet_id}] reposted, id = {new_tweet['id_str']}")
 

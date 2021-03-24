@@ -32,24 +32,24 @@ def human_time_difference(origin_time, current_time=None):
         if second_diff < 10:
             return "just now"
         if second_diff < 60:
-            return str(second_diff) + " seconds"
+            return "after about " + str(second_diff) + " seconds"
         if second_diff < 120:
-            return "a minute"
+            return "after about a minute"
         if second_diff < 3600:
-            return str(int(second_diff / 60)) + " minutes"
+            return "after about " + str(int(second_diff / 60)) + " minutes"
         if second_diff < 7200:
-            return "an hour"
+            return "after about an hour"
         if second_diff < 86400:
-            return str(int(second_diff / 3600)) + " hours"
+            return "after about " + str(int(second_diff / 3600)) + " hours"
     if day_diff == 1:
-        return "Yesterday"
+        return "after at least yesterday"
     if day_diff < 7:
-        return str(day_diff) + " days"
+        return "after about " + str(day_diff) + " days"
     if day_diff < 31:
-        return str(int(day_diff / 7)) + " weeks"
+        return "after about " + str(int(day_diff / 7)) + " weeks"
     if day_diff < 365:
-        return str(int(day_diff / 30)) + " months"
-    return str(int(day_diff / 365)) + " years"
+        return "after about " + str(int(day_diff / 30)) + " months"
+    return "after about " + str(int(day_diff / 365)) + " years"
 
 
 def short_human_time(origin_time, current_time=None):
