@@ -94,11 +94,10 @@ class Watcher(TwythonStreamer):
                 full_path = os.path.join(dir_pref, m)
                 with open(full_path, 'rb') as fp:
                     if full_path.endswith('mp4'):
-                        pass # Not working
-                        # new_media_id = self.poster.upload_media(media=fp, media_type='video/mp4')['media_id']
+                        new_media_id = self.poster.upload_media(media=fp, media_type='video/mp4')['media_id']
                     else:
                         new_media_id = self.poster.upload_media(media=fp)['media_id']
-                        new_media_ids.append(new_media_id)
+                    new_media_ids.append(new_media_id)
             if new_media_ids:
                 self.poster.update_status(
                     status=status, 
