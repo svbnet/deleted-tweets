@@ -29,7 +29,7 @@ def tweet_source_name(value):
 
 
 environment = Environment(
-	loader=FileSystemLoader(context.template_path),
+	loader=FileSystemLoader(context.get_config()['template']['path']),
 	autoescape=select_autoescape(['html', 'xml'])
 )
 
@@ -60,8 +60,9 @@ def trim(path, margin):
 
 def make_config():
 	config = {}
-	if context.custom_font is not None:
-		path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'assets', 'css', f'{context.custom_font}.css'))
+	cfont = context.get_config().get('custom_font', None)
+	if cfont is not None:
+		path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'assets', 'css', f'{cfont}.css'))
 		normal_path = path.replace('\\', '/')
 		url = f'file://{urllib.parse.quote(normal_path)}'
 		config['custom_font'] = {'css_url': url, 'path': path}

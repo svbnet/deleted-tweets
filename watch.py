@@ -6,22 +6,19 @@ from watcher import Watcher
 
 from twython import Twython
 
-context.setup_logger()
 logger = logging.getLogger(__name__)
 
-context.open_db()
+config = context.get_config()
 
-consumer_key = context.get_setting('consumer_key')
-consumer_secret = context.get_setting('consumer_secret')
-access_token = context.get_setting('access_token')
-access_token_secret = context.get_setting('access_token_secret')
+watch_id = config['watcher']['watcher_account_id']
+watcher_account = context.find_account_by_id(watch_id)
 
-follow_ids = context.get_setting('follow').split(',')
+follow_ids = config['watcher']['watch_ids']
 logger.info("Following user IDs: " + ', '.join(follow_ids))
 
 try:
-    rest = Twython(consumer_key, consumer_secret, access_token, access_token_secret)
-    Watcher(consumer_key, consumer_secret, access_token, access_token_secret, rest, follow_ids).begin()
+    rest = Twython(config['consumer']['key'], config['consumer']['secret'], watcher_account['access']['token'], watcher_account['access']['secret'])
+    Watcher(config['consumer']['key'], config['consumer']['secret'], watcher_account['access']['token'], watcher_account['access']['secret'], rest, follow_ids).begin()
 except KeyboardInterrupt:
     logger.info('SIGINT/ctrl-c received')
     exit(0)

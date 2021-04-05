@@ -6,34 +6,23 @@ from twython.exceptions import TwythonAuthError
 
 import context
 
-context.open_db()
+db = context.get_db()
+config = context.get_config()
 
-cur = context.con.cursor()
-cur.execute(
-    'CREATE TABLE IF NOT EXISTS settings(name TEXT PRIMARY KEY, value TEXT)')
-consumer_key_old = context.get_setting('consumer_key')
-prompt = 'Enter consumer key'
-if consumer_key_old:
-    prompt += ' [' + consumer_key_old + ']'
-consumer_key = input(prompt + ': ')
-if consumer_key == '':
-    if consumer_key_old:
-        consumer_key = consumer_key_old
-    else:
-        print("No consumer key provided")
-        exit(1)
-consumer_secret_old = context.get_setting('consumer_secret')
-prompt = 'Enter consumer secret'
-if consumer_secret_old:
-    prompt += ' [' + consumer_secret_old + ']'
-consumer_secret = input(prompt + ': ')
-if consumer_secret == '':
-    if consumer_secret_old:
-        consumer_secret = consumer_secret_old
-    else:
-        print("No consumer secret provided")
-        exit(1)
-rest = Twython(consumer_key, consumer_secret)
+consumer_keys = config.get('consumer', None)
+if not consumer_keys:
+    print('''
+    Please set the consumer keys in config.json as:
+        {
+            "consumer": {
+                "key": "<your_consumer_key_here>",
+                "secret": "<your_consumer_secret_here>"
+            }
+            ...
+        }
+    ''')
+
+rest = Twython(consumer_keys['key'], consumer_keys['secret'])
 try:
     auth = rest.get_authentication_tokens()
 except TwythonAuthError:

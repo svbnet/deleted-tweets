@@ -1,57 +1,68 @@
-import os, os.path
-import sqlite3
-import logging
+import os, os.path, logging, json, sys
 
+from db import DB
 
 def relativize(filename):
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
 
+# Defaults
+_DEFAULT_CONFIG = {
+    'log': {
+        'path': './log',
+        'level': 'INFO',
+    },
+    'template': {
+        'path': './templates',
+        'name': 'template_new.html',
+    },
+    'db': './tweets.db',
+    'media_dir': './media',
+    'temp_dir': './temp',
+    'custom_font': None,
+}
+_config = None
 
-con = None
-
-# Directory for storing and retrieving downloaded media
-media_dir = os.getenv('MEDIA_DIR', relativize('media'))
-
-# Jinja2 base directory for templates
-template_path = os.getenv('TEMPLATE', relativize('templates'))
-
-# Template to use for Tweets
-template_name = os.getenv('TEMPLATE_NAME', 'template_new.html')
-
-# Path to database
-db_path = os.getenv('DB', relativize('tweets.db'))
-
-# Path to log file
-log_path = os.getenv('LOG', relativize('log'))
-
-# Log level to set (see logging module docs)
-log_level = os.getenv('LOGLEVEL', 'INFO')
-
-# Name of custom font stylesheet to use
-custom_font = os.getenv('CUSTOM_FONT', None)
+try:
+    config_path = sys.argv[sys.argv.index('-c') + 1]
+except (KeyError, ValueError):
+    config_path = relativize('config.json')
 
 
-def setup_logger():
-    formatter = logging.Formatter('%(asctime)s:%(name)s [%(levelname)s] %(message)s')
-    fh = logging.FileHandler(log_path)
-    fh.setFormatter(formatter)
-    sh = logging.StreamHandler()
-    sh.setFormatter(formatter)
-    logger = logging.root
-    logger.setLevel(getattr(logging, log_level))
-    logger.addHandler(fh)
-    logger.addHandler(sh)
+def get_config():
+    global _config
+    if not _config:
+        _config = _DEFAULT_CONFIG
+        try:
+            with open(config_path, 'r') as fp:
+                _config.update(json.load(fp))
+        except FileNotFoundError:
+            commit_config()
+            get_config()
+    return _config
 
 
-def open_db():
-    global con
-    con = sqlite3.connect(db_path, isolation_level=None)
+def find_account_by_id(account_id):
+    [a for a in get_config()['accounts'] if a['id'] == account_id][0]
 
 
-def get_setting(name):
-    cur = con.execute("SELECT value FROM settings WHERE name = ?", (name,))
-    row = cur.fetchone()
-    if row is None:
-        return None
-    else:
-        return row[0]
+def commit_config():
+    with open(config_path, 'w') as fp:
+        json.dump(_config, fp, indent='    ')
+
+
+formatter = logging.Formatter('%(asctime)s:%(name)s [%(levelname)s] %(message)s')
+fh = logging.FileHandler(get_config()['log']['path'])
+fh.setFormatter(formatter)
+sh = logging.StreamHandler()
+sh.setFormatter(formatter)
+logger = logging.root
+logger.setLevel(getattr(logging, get_config()['log']['level']))
+logger.addHandler(fh)
+logger.addHandler(sh)
+
+
+_db = DB(get_config()['db'])
+_db.connect()
+
+def get_db():
+    return _db
