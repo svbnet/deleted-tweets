@@ -19,6 +19,51 @@ def tweet_has_media(tweet_dict):
 def render_tweet(tweet):
     return tweetcap(context.template_name, tweet)
 
+
+def save_tweet_media(tweet_dict):
+    logger.info(f"[tweet:{tweet_dict['id_str']}] Downloading media...")
+    dir_pref = os.path.join(context.media_dir, tweet_dict['id_str'])
+    media = tweet_dict['extended_entities']['media']
+    i = 1
+    for item in media:
+        mtype = item['type']
+        if mtype == 'video':
+            variants = sorted(item['video_info']['variants'], key=lambda variant: variant.get('bitrate', 0), reverse=True)
+            url = variants[0]['url']
+            ext = '.mp4'
+        else:
+            url = item['media_url_https']
+            ext = os.path.splitext(url)[1]
+        media_path = os.path.join(dir_pref, f"{i}_{mtype}{ext}")
+        logger.debug(f"[tweet:{tweet_dict['id_str']}][{mtype}:{i}] Downloading {url}...")
+        os.makedirs(dir_pref, exist_ok=True)
+        urllib.request.urlretrieve(url, media_path)
+        i += 1
+
+
+def save_tweet(tweet_dict):
+    logger.info(f"[tweet:{tweet_dict['id_str']}] Inserting into DB...")
+    data_json = json.dumps(tweet_dict)
+    context.con.execute('INSERT OR IGNORE INTO tweets(id_str, json) VALUES (?,?)', (tweet_dict['id_str'], data_json))
+
+    if tweet_has_media(tweet_dict):
+        try:
+            save_tweet_media(tweet_dict)
+        except Exception as err:
+            logger.exception(f"[tweet:{tweet_dict['id_str']}] Downloading media failed, tweet may have been deleted too early ", err)
+    
+    if tweet_dict['is_quote_status']:
+        quoted_tweet = tweet_dict['quoted_status']
+        if tweet_has_media(quoted_tweet):
+            logger.info('Quoted tweet has media, so downloading')
+            try:
+                save_tweet_media(quoted_tweet)
+            except Exception as err:
+                logger.exception(f"[tweet:{quoted_tweet['id_str']}] Downloading media failed, tweet may have been deleted too early ", err)
+    
+    logger.debug(f"[tweet:{tweet_dict['id_str']}] finished")
+
+
 retry = Retryer(lambda a, m: logger.info('Attempting %s / %s', a, m), lambda e: logger.error('Error while attempting: %s', e))
 
 class Watcher(TwythonStreamer):
@@ -42,48 +87,6 @@ class Watcher(TwythonStreamer):
                 logger.info('Twython error, may be recoverable: %s', err, exc_info=True)
 
         logger.warning('Failed to connect! Check network status/system time')
-    
-    def save_tweet_media(self, tweet_dict):
-        logger.info(f"[tweet:{tweet_dict['id_str']}] Downloading media...")
-        dir_pref = os.path.join(context.media_dir, tweet_dict['id_str'])
-        media = tweet_dict['extended_entities']['media']
-        i = 1
-        for item in media:
-            mtype = item['type']
-            if mtype == 'video':
-                variants = sorted(item['video_info']['variants'], key=lambda variant: variant.get('bitrate', 0), reverse=True)
-                url = variants[0]['url']
-                ext = '.mp4'
-            else:
-                url = item['media_url_https']
-                ext = os.path.splitext(url)[1]
-            media_path = os.path.join(dir_pref, f"{i}_{mtype}{ext}")
-            logger.debug(f"[tweet:{tweet_dict['id_str']}][{mtype}:{i}] Downloading {url}...")
-            os.makedirs(dir_pref, exist_ok=True)
-            urllib.request.urlretrieve(url, media_path)
-            i += 1
-
-    def save_tweet(self, tweet_dict):
-        logger.info(f"[tweet:{tweet_dict['id_str']}] Inserting into DB...")
-        data_json = json.dumps(tweet_dict)
-        context.con.execute('INSERT OR IGNORE INTO tweets(id_str, json) VALUES (?,?)', (tweet_dict['id_str'], data_json))
-
-        if tweet_has_media(tweet_dict):
-            try:
-                self.save_tweet_media(tweet_dict)
-            except Exception as err:
-                logger.exception(f"[tweet:{tweet_dict['id_str']}] Downloading media failed, tweet may have been deleted too early ", err)
-        
-        if tweet_dict['is_quote_status']:
-            quoted_tweet = tweet_dict['quoted_status']
-            if tweet_has_media(quoted_tweet):
-                logger.info('Quoted tweet has media, so downloading')
-                try:
-                    self.save_tweet_media(quoted_tweet)
-                except Exception as err:
-                    logger.exception(f"[tweet:{quoted_tweet['id_str']}] Downloading media failed, tweet may have been deleted too early ", err)
-        
-        logger.debug(f"[tweet:{tweet_dict['id_str']}] finished")
     
     def post_tweet_media_as_followup(self, tweet_id, in_reply_id, status):
         dir_pref = os.path.join(context.media_dir, tweet_id)
@@ -150,7 +153,7 @@ class Watcher(TwythonStreamer):
         self.connection_attempts = 0
         if 'text' in data:
             if data['user']['id_str'] in self.follow_ids:
-                self.save_tweet(data)
+                save_tweet(data)
         elif 'delete' in data:
             self.post_saved_tweet(
                 data['delete']['status']['id_str'], 

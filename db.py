@@ -1,4 +1,4 @@
-import logging, sqlite3, os, os.path, shutil
+import logging, sqlite3, os, os.path, shutil, json
 from datetime import datetime
 
 
@@ -57,6 +57,12 @@ class DB:
         logger.info("%s doesn't exist, so creating...", self.path)
         self.conn.executescript(self.INIT_SCHEMA)
     
+    def insert_tweet(self, tweet_dict):
+        self.conn.execute(
+            "INSERT OR IGNORE INTO `tweets` (`id_str`, `inserted_at`, `json`) VALUES (?, ?, ?)",
+            [tweet_dict['id_str'], datetime.now(), json.dumps(tweet_dict)]
+        )
+
     def check_for_migrations(self):
         self._connect()
         cur = self.conn.cursor()
