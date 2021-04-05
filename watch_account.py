@@ -60,7 +60,8 @@ for account in sys.argv[2:]:
     if 'id_str' in user:
         print("@" + user['screen_name'] +
                 " (user ID " + user['id_str'] + ") found")
-        watch_ids.append(user['id_str'])
+        if user['id_str'] not in watch_ids:
+            watch_ids.append(user['id_str'])
         context.commit_config()
         backfill(user['id_str'])
     else:

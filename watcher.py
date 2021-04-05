@@ -1,5 +1,6 @@
-import json, os, os.path, urllib.request, logging
+import json, os, os.path, urllib.request, logging, mimetypes
 from datetime import datetime
+from PIL.Image import new
 
 from twython import Twython, TwythonStreamer, TwythonError
 import dateutil.tz
@@ -12,17 +13,19 @@ from tweetcap import tweetcap
 
 logger = logging.getLogger(__name__)
 
+db = context.get_db()
+
 def tweet_has_media(tweet_dict):
     return 'extended_entities' in tweet_dict and 'media' in tweet_dict['extended_entities']
 
 
 def render_tweet(tweet):
-    return tweetcap(context.template_name, tweet)
+    return tweetcap(context.get_config()['template']['name'], tweet)
 
 
 def save_tweet_media(tweet_dict):
     logger.info(f"[tweet:{tweet_dict['id_str']}] Downloading media...")
-    dir_pref = os.path.join(context.media_dir, tweet_dict['id_str'])
+    dir_pref = os.path.join(context.relativize(context.get_config()['media_dir']), tweet_dict['id_str'])
     media = tweet_dict['extended_entities']['media']
     i = 1
     for item in media:
@@ -43,14 +46,13 @@ def save_tweet_media(tweet_dict):
 
 def save_tweet(tweet_dict):
     logger.info(f"[tweet:{tweet_dict['id_str']}] Inserting into DB...")
-    data_json = json.dumps(tweet_dict)
-    context.con.execute('INSERT OR IGNORE INTO tweets(id_str, json) VALUES (?,?)', (tweet_dict['id_str'], data_json))
+    db.insert_tweet(tweet_dict)
 
     if tweet_has_media(tweet_dict):
         try:
             save_tweet_media(tweet_dict)
         except Exception as err:
-            logger.exception(f"[tweet:{tweet_dict['id_str']}] Downloading media failed, tweet may have been deleted too early ", err)
+            logger.exception(f"[tweet:{tweet_dict['id_str']}] Downloading media failed, tweet may have been deleted too early: %s", err)
     
     if tweet_dict['is_quote_status']:
         quoted_tweet = tweet_dict['quoted_status']
@@ -59,7 +61,7 @@ def save_tweet(tweet_dict):
             try:
                 save_tweet_media(quoted_tweet)
             except Exception as err:
-                logger.exception(f"[tweet:{quoted_tweet['id_str']}] Downloading media failed, tweet may have been deleted too early ", err)
+                logger.exception(f"[tweet:{quoted_tweet['id_str']}] Downloading media failed, tweet may have been deleted too early: %s", err)
     
     logger.debug(f"[tweet:{tweet_dict['id_str']}] finished")
 
@@ -68,10 +70,12 @@ retry = Retryer(lambda a, m: logger.info('Attempting %s / %s', a, m), lambda e: 
 
 class Watcher(TwythonStreamer):
 
-    def __init__(self, consumer_key, consumer_secret, access_token, access_token_secret, poster, follow_ids):
-        super().__init__(consumer_key, consumer_secret, access_token, access_token_secret)
+    def __init__(self, credentials, poster_credentials, follow_ids):
+        super().__init__(credentials.consumer_key, credentials.consumer_secret, 
+                        credentials.access_token, credentials.access_token_secret)
         self.connection_attempts = 0
-        self.poster = poster
+        self.poster_credentials = poster_credentials
+        self.poster = poster_credentials.create_twython()
         self.follow_ids = follow_ids
     
     def begin(self):
@@ -89,35 +93,35 @@ class Watcher(TwythonStreamer):
         logger.warning('Failed to connect! Check network status/system time')
     
     def post_tweet_media_as_followup(self, tweet_id, in_reply_id, status):
-        dir_pref = os.path.join(context.media_dir, tweet_id)
+        dir_pref = os.path.join(context.relativize(context.get_config()['media_dir']), tweet_id)
         if os.path.exists(dir_pref):
             logger.info(f"[tweet:{tweet_id}] posting followup media")
             new_media_ids = []
             for m in os.listdir(dir_pref):
                 full_path = os.path.join(dir_pref, m)
+                mime_type, _ = mimetypes.guess_type(full_path)
                 with open(full_path, 'rb') as fp:
-                    if full_path.endswith('mp4'):
-                        new_media_id = self.poster.upload_media(media=fp, media_type='video/mp4')['media_id']
-                    else:
-                        new_media_id = self.poster.upload_media(media=fp)['media_id']
-                    new_media_ids.append(new_media_id)
+                    # chunked media upload for every type = better?
+                    new_media_id = self.poster.upload_video(fp, mime_type, check_progress=True)['media_id']
+                new_media_ids.append(new_media_id)
             if new_media_ids:
-                self.poster.update_status(
+                stat = self.poster.update_status(
                     status=status, 
                     media_ids=new_media_ids,
                     in_reply_to_status_id=in_reply_id,
                     auto_populate_reply_metadata=True
                 )
+                db.insert_repost(stat['id_str'], self.poster_credentials.account_id, tweet_id, 'media')
     
     def post_saved_tweet(self, tweet_id, deleted_at):
         logger.info(f"[tweet:{tweet_id}] begin reposting")
-        cur = context.con.execute('SELECT json FROM tweets WHERE id_str = ?', (tweet_id,))
-        row = cur.fetchone()
-        if row is None:
+        tweet = db.find_tweet(tweet_id)
+        if tweet is None:
             logger.info(f"[tweet:{tweet_id}] not found")
             return
 
-        tweet = json.loads(row[0])
+        db.update_tweet_deleted_at(tweet_id, deleted_at)
+
         if 'retweeted_status' in tweet:
             logger.info(f"[tweet:{tweet_id}] is a retweet, so skipping")
             return
@@ -130,8 +134,9 @@ class Watcher(TwythonStreamer):
                 status += ' ' + url['expanded_url']
 
         image_path = render_tweet(tweet)
+        mime_type, _ = mimetypes.guess_type(image_path)
         with open(image_path, 'rb') as image:
-            media = retry.attempt(lambda: self.poster.upload_media(media=image))
+            media = retry.attempt(lambda: self.poster.upload_video(image, mime_type, check_progress=True))
             if not media:
                 logger.error('Failed to upload media!')
                 return
@@ -140,7 +145,7 @@ class Watcher(TwythonStreamer):
                 logger.error('Failed to send tweet!')
                 return
 
-        os.remove(image_path)
+        db.insert_repost(new_tweet['id_str'], self.poster_credentials.account_id, tweet_id)
         logger.info(f"[tweet:{tweet_id}] reposted, id = {new_tweet['id_str']}")
 
         # Post media if we have it as a reply

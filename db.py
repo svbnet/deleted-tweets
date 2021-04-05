@@ -62,6 +62,19 @@ class DB:
             "INSERT OR IGNORE INTO `tweets` (`id_str`, `inserted_at`, `json`) VALUES (?, ?, ?)",
             [tweet_dict['id_str'], datetime.now(), json.dumps(tweet_dict)]
         )
+    
+    def find_tweet(self, id_str):
+        row = self.conn.execute("SELECT `json` FROM `tweets` WHERE `id_str` = ? LIMIT 0, 1", [id_str]).fetchone()
+        if not row: return None
+        return json.loads(row[0])
+    
+    def update_tweet_deleted_at(self, id_str, deleted_at):
+        self.conn.execute("UPDATE `tweets` SET `deleted_at` = ? WHERE `id_str` = ?", [deleted_at, id_str])
+
+    def insert_repost(self, id_str, poster_id_str, original_tweet_id_str, repost_type='tweet'):
+        self.conn.execute("""INSERT INTO `reposts` (`id_str`, `poster_id_str`, 
+        `original_tweet_id_str`, `repost_type`, `inserted_at`)
+        VALUES (?, ?, ?, ?, ?)""", [id_str, poster_id_str, original_tweet_id_str, repost_type, datetime.now()])
 
     def check_for_migrations(self):
         self._connect()

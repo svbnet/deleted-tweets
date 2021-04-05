@@ -1,10 +1,12 @@
 #!/usr/bin/python
 import logging
 
+from twython import Twython
+
 import context
 from watcher import Watcher
+from twitter import CredentialsBag
 
-from twython import Twython
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +19,11 @@ follow_ids = config['watcher']['watch_ids']
 logger.info("Following user IDs: " + ', '.join(follow_ids))
 
 try:
-    rest = Twython(config['consumer']['key'], config['consumer']['secret'], watcher_account['access']['token'], watcher_account['access']['secret'])
-    Watcher(config['consumer']['key'], config['consumer']['secret'], watcher_account['access']['token'], watcher_account['access']['secret'], rest, follow_ids).begin()
+    watcher_credentials = CredentialsBag() \
+            .update_consumer(**config['consumer']) \
+            .update_account(**watcher_account['access'], account_id=watch_id)
+    # TODO distinct watcher and poster credentials...
+    Watcher(watcher_credentials, watcher_credentials, follow_ids).begin()
 except KeyboardInterrupt:
     logger.info('SIGINT/ctrl-c received')
     exit(0)

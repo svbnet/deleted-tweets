@@ -42,7 +42,7 @@ def get_config():
 
 
 def find_account_by_id(account_id):
-    [a for a in get_config()['accounts'] if a['id'] == account_id][0]
+    return [a for a in get_config()['accounts'] if a['id'] == account_id][0]
 
 
 def commit_config():
