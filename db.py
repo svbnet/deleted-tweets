@@ -64,9 +64,12 @@ class DB:
         )
     
     def find_tweet(self, id_str):
-        row = self.conn.execute("SELECT `json` FROM `tweets` WHERE `id_str` = ? LIMIT 0, 1", [id_str]).fetchone()
+        row = self.conn.execute("SELECT `json`, `deleted_at` FROM `tweets` WHERE `id_str` = ? LIMIT 0, 1", [id_str]).fetchone()
         if not row: return None
-        return json.loads(row[0])
+        return {
+            'tweet': json.loads(row[0]),
+            'deleted_at': row[1]
+        }
     
     def update_tweet_deleted_at(self, id_str, deleted_at):
         self.conn.execute("UPDATE `tweets` SET `deleted_at` = ? WHERE `id_str` = ?", [deleted_at, id_str])
@@ -75,6 +78,15 @@ class DB:
         self.conn.execute("""INSERT INTO `reposts` (`id_str`, `poster_id_str`, 
         `original_tweet_id_str`, `repost_type`, `inserted_at`)
         VALUES (?, ?, ?, ?, ?)""", [id_str, poster_id_str, original_tweet_id_str, repost_type, datetime.now()])
+    
+    def find_unreposted_tweets(self):
+        rows = self.conn.execute("""SELECT `json`, `deleted_at` FROM `tweets`
+        LEFT JOIN `reposts` ON `reposts`.`original_tweet_id_str` = `tweets`.`id_str`
+        WHERE `tweets`.`deleted_at` IS NOT NULL 
+        AND `reposts`.`original_tweet_id_str` IS NULL
+        ORDER BY `tweets`.`deleted_at`""")
+        if not rows: return []
+        return [{'tweet': json.loads(row[0]), 'deleted_at': row[1]} for row in rows]
 
     def check_for_migrations(self):
         self._connect()

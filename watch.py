@@ -6,6 +6,7 @@ from twython import Twython
 import context
 from watcher import Watcher
 from twitter import CredentialsBag
+from poster import Poster
 
 
 logger = logging.getLogger(__name__)
@@ -22,8 +23,9 @@ try:
     watcher_credentials = CredentialsBag() \
             .update_consumer(**config['consumer']) \
             .update_account(**watcher_account['access'], account_id=watch_id)
+    poster = Poster(watcher_credentials)
     # TODO distinct watcher and poster credentials...
-    Watcher(watcher_credentials, watcher_credentials, follow_ids).begin()
+    Watcher(watcher_credentials, poster, follow_ids).begin()
 except KeyboardInterrupt:
     logger.info('SIGINT/ctrl-c received')
     exit(0)
