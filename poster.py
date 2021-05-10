@@ -2,7 +2,7 @@ import os.path, logging, mimetypes
 
 import context
 from util import human_time_difference, dt_from_timestampms
-from tweetcap import tweetcap
+from tweetcap import tweetcap, tweet_strptime
 from retryer import Retryer
 
 
@@ -58,7 +58,7 @@ class Poster:
             logger.info(f"[tweet:{tweet_id}] is a retweet, so skipping")
             return
         
-        elapsed = human_time_difference(dt_from_timestampms(tweet['timestamp_ms']), saved_tweet['deleted_at'])
+        elapsed = human_time_difference(tweet_strptime(tweet['created_at']), saved_tweet['deleted_at'])
         status = 'deleted ' + elapsed
         if len(tweet['entities']['urls']) > 0:
             status += "\nlinks in original tweet:"
