@@ -58,7 +58,7 @@ class Poster:
             logger.info(f"[tweet:{tweet_id}] is a retweet, so skipping")
             return
         
-        elapsed = human_time_difference(tweet_strptime(tweet['created_at']), saved_tweet['deleted_at'])
+        elapsed = human_time_difference(tweet_strptime(tweet['created_at']).replace(tzinfo=None), saved_tweet['deleted_at'])
         status = 'deleted ' + elapsed
         if len(tweet['entities']['urls']) > 0:
             status += "\nlinks in original tweet:"
