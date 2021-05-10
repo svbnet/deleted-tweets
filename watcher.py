@@ -96,7 +96,7 @@ class Watcher(TwythonStreamer):
             if data['user']['id_str'] in self.follow_ids:
                 save_tweet(data)
         elif 'delete' in data:
-            self.poster.post_saved_tweet(
+            self.on_delete(
                 data['delete']['status']['id_str'], 
                 dt_from_timestampms(data['delete']['timestamp_ms'])
             )
