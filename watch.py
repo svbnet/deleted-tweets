@@ -1,20 +1,18 @@
-#!/usr/bin/python
 import logging
 
-from twython import Twython
+from deleted_tweets import context, config as cfg
+from deleted_tweets.watcher import Watcher
+from deleted_tweets.twitter import CredentialsBag
+from deleted_tweets.poster import Poster
 
-import context
-from watcher import Watcher
-from twitter import CredentialsBag
-from poster import Poster
-
+context.initialize(__file__)
 
 logger = logging.getLogger(__name__)
 
 config = context.get_config()
 
 watch_id = config['watcher']['watcher_account_id']
-watcher_account = context.find_account_by_id(watch_id)
+watcher_account = cfg.find_account_by_id(config, watch_id)
 
 follow_ids = config['watcher']['watch_ids']
 logger.info("Following user IDs: " + ', '.join(follow_ids))

@@ -1,9 +1,9 @@
-import json, logging
+import json
 
 
 _DEFAULT_CONFIG = {
     'log': {
-        'path': './log',
+        'path': './data/log',
         'level': 'INFO',
     },
     'template': {
@@ -23,7 +23,7 @@ def get_or_create(config_path):
         with open(config_path, 'r') as fp:
             config.update(json.load(fp))
     except FileNotFoundError:
-        commit_config()
+        commit(config_path, config)
     return config
 
 

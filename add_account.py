@@ -1,8 +1,9 @@
 from twython import Twython
 from twython.exceptions import TwythonAuthError
 
-import context
+from deleted_tweets import context
 
+context.initialize(__file__)
 config = context.get_config()
 
 consumer_keys = config.get('consumer', None)

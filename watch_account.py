@@ -1,8 +1,10 @@
-import re, sys
+import sys
 
 from twython import Twython
 
-import context
+from deleted_tweets import context
+context.initialize(__file__)
+
 config = context.get_config()
 db = context.get_db()
 

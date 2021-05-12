@@ -1,4 +1,4 @@
-import os, os.path, logging, json, sys, distutils.spawn
+import os, os.path, logging, sys, distutils.spawn
 
 from deleted_tweets.db import DB
 from deleted_tweets import config
@@ -41,7 +41,7 @@ def initialize(init_file_path):
         _config_path = relativize('config.json')
     
     # Init config
-    _config = config.get_or_create(config_path)
+    _config = config.get_or_create(_config_path)
 
     # Init logging
     formatter = logging.Formatter('%(asctime)s:%(name)s [%(levelname)s] %(message)s')

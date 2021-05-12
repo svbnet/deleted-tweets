@@ -1,9 +1,11 @@
-import context
-from twitter import CredentialsBag
-from poster import Poster
+from deleted_tweets import context
+from deleted_tweets.twitter import CredentialsBag
+from deleted_tweets.poster import Poster
 
+context.initialize(__file__)
 db = context.get_db()
 config = context.get_config()
+
 watch_id = config['watcher']['watcher_account_id']
 watcher_account = context.find_account_by_id(watch_id)
 

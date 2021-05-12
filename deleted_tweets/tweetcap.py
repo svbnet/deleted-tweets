@@ -28,15 +28,22 @@ def tweet_source_name(value):
 	return re.search(r'<a(?:.*)>(.*)<\/a>', value).group(1)
 
 
-environment = Environment(
-	loader=FileSystemLoader(context.get_config()['template']['path']),
-	autoescape=select_autoescape(['html', 'xml'])
-)
+_environment = None
 
-environment.filters['tweet_htmlize'] = tweet_htmlize
-environment.filters['short_datetime'] = short_datetime
-environment.filters['long_datetime'] = long_datetime
-environment.filters['tweet_source_name'] = tweet_source_name
+
+def get_environment():
+	global _environment
+	if not _environment:
+		_environment = Environment(
+			loader=FileSystemLoader(context.get_config()['template']['path']),
+			autoescape=select_autoescape(['html', 'xml'])
+		)
+
+		_environment.filters['tweet_htmlize'] = tweet_htmlize
+		_environment.filters['short_datetime'] = short_datetime
+		_environment.filters['long_datetime'] = long_datetime
+		_environment.filters['tweet_source_name'] = tweet_source_name
+	return _environment
 
 
 def trim(path, margin):
@@ -62,15 +69,16 @@ def make_config():
 	config = {}
 	cfont = context.get_config().get('custom_font', None)
 	if cfont is not None:
-		path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'assets', 'css', f'{cfont}.css'))
+		path = context.relativize(os.path.join('assets', 'css', f'{cfont}.css'))
 		normal_path = path.replace('\\', '/')
 		url = f'file://{urllib.parse.quote(normal_path)}'
 		config['custom_font'] = {'css_url': url, 'path': path}
 	return config
 
+
 def tweetcap(template_name, tweet):
 	config = make_config()
-	template = environment.get_template(template_name)
+	template = get_environment().get_template(template_name)
 
 	html = template.render(tweet=tweet, config=config)
 

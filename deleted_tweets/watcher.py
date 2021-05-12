@@ -1,10 +1,7 @@
-import json, os, os.path, urllib.request, logging, mimetypes
-from datetime import datetime
-from PIL.Image import new
+import os, os.path, urllib.request, logging
 
-from twython import Twython, TwythonStreamer, TwythonError
-import dateutil.tz
-from requests.exceptions import ChunkedEncodingError, ConnectionError
+from twython import TwythonStreamer, TwythonError
+from requests.exceptions import ChunkedEncodingError
 
 from deleted_tweets import context
 from deleted_tweets.util import dt_from_timestampms
