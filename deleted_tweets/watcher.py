@@ -6,10 +6,9 @@ from twython import Twython, TwythonStreamer, TwythonError
 import dateutil.tz
 from requests.exceptions import ChunkedEncodingError, ConnectionError
 
-import context
-from util import human_time_difference, dt_from_timestampms
-from retryer import Retryer
-from tweetcap import tweetcap
+from deleted_tweets import context
+from deleted_tweets.util import dt_from_timestampms
+
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,7 @@ def save_tweet_media(tweet_dict):
     i = 1
     for item in media:
         mtype = item['type']
-        if mtype == 'video':
+        if mtype == 'video' or mtype == 'animated_gif':
             variants = sorted(item['video_info']['variants'], key=lambda variant: variant.get('bitrate', 0), reverse=True)
             url = variants[0]['url']
             ext = '.mp4'

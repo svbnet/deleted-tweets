@@ -1,9 +1,9 @@
 import os.path, logging, mimetypes
 
-import context
-from util import human_time_difference, dt_from_timestampms
-from tweetcap import tweetcap, tweet_strptime
-from retryer import Retryer
+from deleted_tweets import context
+from deleted_tweets.util import human_time_difference, dt_from_timestampms
+from deleted_tweets.retryer import Retryer
+from deleted_tweets.tweetcap import tweetcap
 
 
 logger = logging.getLogger(__name__)
