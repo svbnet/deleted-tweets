@@ -1,5 +1,5 @@
 import logging, sqlite3, os, os.path, shutil, json
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ class DB:
         if not row: return None
         return {
             'tweet': json.loads(row[0]),
-            'deleted_at': row[1]
+            'deleted_at': row[1].replace(tzinfo=timezone.utc)
         }
     
     def update_tweet_deleted_at(self, id_str, deleted_at):
@@ -86,7 +86,7 @@ class DB:
         AND `reposts`.`original_tweet_id_str` IS NULL
         ORDER BY `tweets`.`deleted_at`""")
         if not rows: return []
-        return [{'tweet': json.loads(row[0]), 'deleted_at': row[1]} for row in rows]
+        return [{'tweet': json.loads(row[0]), 'deleted_at': row[1].replace(tzinfo=timezone.utc)} for row in rows]
 
     def check_for_migrations(self):
         self._connect()
