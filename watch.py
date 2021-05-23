@@ -1,11 +1,12 @@
 import logging
 
 from deleted_tweets import context, config as cfg
+context.initialize(__file__)
+
 from deleted_tweets.watcher import Watcher
 from deleted_tweets.twitter import CredentialsBag
 from deleted_tweets.poster import Poster
 
-context.initialize(__file__)
 
 logger = logging.getLogger(__name__)
 
