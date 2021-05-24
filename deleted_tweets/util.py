@@ -5,7 +5,7 @@ from dateutil import tz
 
 
 def dt_from_timestampms(timestamp_ms):
-    return datetime.fromtimestamp(int(timestamp_ms) / 1000)
+    return datetime.utcfromtimestamp(int(timestamp_ms) / 1000)
 
 
 def human_time_difference(origin_time, current_time=None):

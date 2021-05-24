@@ -60,7 +60,7 @@ class DB:
     def insert_tweet(self, tweet_dict):
         self.conn.execute(
             "INSERT OR IGNORE INTO `tweets` (`id_str`, `inserted_at`, `json`) VALUES (?, ?, ?)",
-            [tweet_dict['id_str'], datetime.now(), json.dumps(tweet_dict)]
+            [tweet_dict['id_str'], datetime.utcnow(), json.dumps(tweet_dict)]
         )
     
     def find_tweet(self, id_str):
