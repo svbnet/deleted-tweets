@@ -1,4 +1,7 @@
-from deleted_tweets import context
+from deleted_tweets import context, config as cfg
+context.initialize(__file__)
+
+from deleted_tweets.watcher import Watcher
 from deleted_tweets.twitter import CredentialsBag
 from deleted_tweets.poster import Poster
 
@@ -7,7 +10,7 @@ db = context.get_db()
 config = context.get_config()
 
 watch_id = config['watcher']['watcher_account_id']
-watcher_account = context.find_account_by_id(watch_id)
+watcher_account = cfg.find_account_by_id(config, watch_id)
 
 watcher_credentials = CredentialsBag() \
         .update_consumer(**config['consumer']) \
